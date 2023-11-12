@@ -82,7 +82,6 @@ export default function Account({ session }: { session: Session}) {
 
 const styles = StyleSheet.create({
     main: {
-        marginTop: '25%',
         justifyContent: 'center',
     },
     buttonView: {

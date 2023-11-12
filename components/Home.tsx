@@ -12,8 +12,10 @@ function Page({ page, session }: { page: number, session: Session }) {
             return <Account session = {session}/>
         case 1:
             return <Feed session = {session}/>
+        default:
+            return <Text>Uh oh, you're not supposed to be here!!!</Text>
     }
-    return <Text>wtf</Text>
+    
 }
 
 export default function Home({ session }: { session: Session }) {
@@ -41,20 +43,21 @@ export default function Home({ session }: { session: Session }) {
 const styles = StyleSheet.create({
     main: {
         flex: 1,
-        flexDirection: 'column'
+        flexDirection: 'column',
     },
     nav: {
         flexDirection: 'row',
         justifyContent: 'space-evenly',
         backgroundColor: 'black',
-        height: '30%'
     },
     navUnselected: {
+        padding: '1%',
         flex: 1,
         alignItems: 'center',
         justifyContent: 'space-evenly'
     },
     navSelected: {
+        padding: '1%',
         flex: 1,
         alignItems: 'center',
         justifyContent: 'space-evenly',
