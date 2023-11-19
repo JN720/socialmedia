@@ -1,10 +1,10 @@
 import Feed from './Feed';
 import Account from './Account';
-import { useState } from 'react';
-import { StyleSheet, View, SafeAreaView, Button, Image, Text, TouchableOpacity } from 'react-native';
-import { Session } from '@supabase/supabase-js';
+import NewPost from './NewPost';
 
-//import accountImage from '../assets/account.png';
+import { useState } from 'react';
+import { StyleSheet, View, SafeAreaView, Text, TouchableOpacity } from 'react-native';
+import { Session } from '@supabase/supabase-js';
 
 function Page({ page, session }: { page: number, session: Session }) {
     switch (page) {
@@ -12,6 +12,8 @@ function Page({ page, session }: { page: number, session: Session }) {
             return <Account session = {session}/>
         case 1:
             return <Feed session = {session}/>
+        case 2:
+            return <NewPost session = {session}/>
         default:
             return <Text>Uh oh, you're not supposed to be here!!!</Text>
     }
@@ -19,7 +21,7 @@ function Page({ page, session }: { page: number, session: Session }) {
 }
 
 export default function Home({ session }: { session: Session }) {
-    const [page, setPage] = useState(0);
+    const [page, setPage] = useState(1);
     return (<SafeAreaView style = {styles.main}>
         <View style = {styles.content}>
             <Page session = {session} page = {page}/>
@@ -33,6 +35,10 @@ export default function Home({ session }: { session: Session }) {
                 <TouchableOpacity style = {page == 1 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(1) }}>
                     <Text style = {styles.image}>image</Text>
                     <Text style = {styles.label}>Feed</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style = {page == 2 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(2) }}>
+                    <Text style = {styles.image}>image</Text>
+                    <Text style = {styles.label}>New Post</Text>
                 </TouchableOpacity>
             </View>
         </View>

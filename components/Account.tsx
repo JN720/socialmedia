@@ -4,80 +4,123 @@ import { StyleSheet, SafeAreaView, View, Alert, Button, TextInput, Text } from '
 import { Session } from '@supabase/supabase-js'
 
 export default function Account({ session }: { session: Session}) {
-    const [loading, setLoading] = useState(true)
-    const [username, setUsername] = useState('')
-    const [avatarUrl, setAvatarUrl] = useState('')
+    const [loading, setLoading] = useState(true);
+    const [name, setName] = useState('');
+    const [bio, setBio] = useState('');
+    const [picture, setPicture] = useState('');
+    const [exists, setExists] = useState(true);
 
     useEffect(() => {
         if (session) getProfile()
     }, [session])
 
-    async function getProfile() {
+    async function createProfile(name: string, picture: string, bio: string) {
+        setLoading(true);
         try {
-            setLoading(true)
-            if (!session?.user) throw new Error('No user on the session!')
-            const { data, error, status } = await supabase
-                .from('profiles')
-                .select(`username, website, avatar_url`)
-                .eq('id', session?.user.id)
-                .single()
-            if (error && status !== 406) throw error
-            if (data) {
-                setUsername(data.username)
-                setAvatarUrl(data.avatar_url)
+            const { error } = await supabase.from('users').insert({
+                id: session?.user.id, 
+                name: name, 
+                bio: bio, 
+                picture: picture
+            });
+            if (error) {
+                throw error;
             }
-        } catch (error) {
-            if (error instanceof Error) Alert.alert(error.message)
+            setExists(true);
+        } catch(error) {
+            Alert.alert(error instanceof Error ? error.message : 'An error occurred');
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
     }
 
-    async function updateProfile({ username, avatar_url }: {username: string, avatar_url: string}) {
+    async function getProfile() {
         try {
             setLoading(true)
-            if (!session?.user) throw new Error('No user on the session!')
-            const updates = {
-                id: session?.user.id,
-                username,
-                avatar_url,
-                updated_at: new Date(),
+            if (!session?.user) {
+                throw new Error('No user on the session!');
             }
-            const { error } = await supabase.from('profiles').upsert(updates)
-            if (error) throw error
+            const { data, error } = await supabase
+                .from('users')
+                .select('name, bio, picture')
+                .eq('id', session?.user.id)
+                .single();
+            if (error) {
+                if (error.code == 'PGRST116') {
+                    setExists(false);
+                } else {
+                    throw error;
+                }
+            }            
+            if (data) {
+                setName(data.name);
+                setBio(data.bio);
+                setPicture(data.picture);
+            }
+        } catch (error) {
+            Alert.alert(error instanceof Error ? error.message : 'An error occurred');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function updateProfile(name: string, picture: string, bio: string) {
+        setLoading(true);
+        try {
+            if (!session?.user) {
+                throw new Error('No user on the session!');
+            }
+            const updates = {id: session?.user.id, name: name, picture: picture, bio: bio};
+            const { error } = await supabase.from('users').upsert(updates);
+            if (error) {
+                throw error;
+            }
         
         } catch (error) {
-            if (error instanceof Error) Alert.alert(error.message)
+            Alert.alert(error instanceof Error ? error.message : 'An error occurred');
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-  }
-
-  return (
-    <SafeAreaView style = {styles.main}>
+    }
+    return (<SafeAreaView style = {styles.main}>
         <Text style = {styles.title}>Account</Text>
+
         <Text style = {styles.label}>Email</Text>
-        <View style = {styles.textView}>
-            <TextInput value = {session?.user?.email}/>
-        </View>
+        <Text style = {styles.email}>{session?.user?.email}</Text>
+
         <Text style = {styles.label}>Username</Text>
         <View style = {styles.textView}>
-            <TextInput value = {username || ''} onChangeText = {(text) => setUsername(text)}/>
+            <TextInput value = {name || ''} onChangeText = {(text) => setName(text)}/>
+        </View>
+
+        <Text style = {styles.label}>Description</Text>
+        <View style = {styles.textView}>
+            <TextInput value = {bio || ''} onChangeText = {(text) => setBio(text)}
+                multiline = {true}
+                numberOfLines = {4}
+                textAlignVertical = "top"
+            />
         </View>
 
         <View style = {styles.buttonView}>
             <Button
-                title = {loading ? 'Loading ...' : 'Update'}
-                onPress = {() => updateProfile({ username, avatar_url: avatarUrl })}
-                disabled = {loading || !username}
+                title = {loading ? 'Loading ...' : (exists ? 'Update' : 'Create')}
+                onPress = {() => {
+                    if (exists) {
+                        updateProfile(name, picture, bio);
+                    } else {
+                        createProfile(name, picture, bio);
+                    }
+                    
+                }}
+                disabled = {loading || !name}
             />
         </View>
 
         <View style = {styles.buttonView}>
             <Button title="Sign Out" onPress={() => supabase.auth.signOut()}/>
         </View>
-    </SafeAreaView>
-  )
+    </SafeAreaView>)
 }
 
 const styles = StyleSheet.create({
@@ -111,5 +154,11 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 30,
         textAlign: 'center'
+    },
+    email: {
+        marginStart: '10%',
+        marginBottom: '2%',
+        color: 'white',
+        fontSize: 20
     }
 })

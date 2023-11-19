@@ -1,22 +1,38 @@
-import { post } from "./Feed";
 import { View, Image, Text, StyleSheet, useWindowDimensions, Button } from 'react-native';
 import { randomUUID } from 'expo-crypto';
+import { supabase } from '../supabase';
 
-export default function Post({ item }: { item: post }) {
+type postType = {
+    id: string; 
+    title: string; 
+    content: string; 
+    files: string[];
+    uid: string;
+    name: string;
+    picture?: string;
+    likes: number;
+    liked: boolean;
+};
+
+export default function Post({ item }: { item: postType }) {
     const dims = useWindowDimensions();
+
+    async function changeLiked() {
+        item.liked = !item.liked;
+    }
 
     return (<View style = {styles.post}>
         <View style = {styles.user}>
-            <Image width = {dims.width * 0.08} height = {dims.width * 0.08} style = {styles.avatar} source = {item.userAvatar ? {uri: item.userAvatar} : require('./user.png')} 
+            <Image width = {dims.width * 0.08} height = {dims.width * 0.08} style = {styles.avatar} source = {item.picture ? {uri: item.picture} : require('./user.png')} 
                 
             />
             <View style = {styles.usernameView}>
-                <Text style = {styles.username}>{item.username}</Text>
+                <Text style = {styles.username}>{item.name}</Text>
             </View>    
         </View>
         <Text style = {styles.title}>{item.title}</Text>
-        <Text style = {styles.content}>{item.text}</Text>
-        {item.files.map((uri) => {
+        <Text style = {styles.content}>{item.content}</Text>
+        {item.files.map((uri: string) => {
             return <Image style = {styles.image} key = {randomUUID()} width = {dims.width * 0.7} height = {dims.width * 0.7} source = {{uri: uri}}/>
         })}
         <View style = {styles.actions}>

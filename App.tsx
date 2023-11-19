@@ -11,11 +11,11 @@ export default function App() {
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session)
+            setSession(session);
         })
 
         supabase.auth.onAuthStateChange((e, session) => {
-            setSession(session)
+            setSession(session);
         })
     }, [])
 

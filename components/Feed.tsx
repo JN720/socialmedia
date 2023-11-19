@@ -1,32 +1,89 @@
-import { Session } from '@supabase/supabase-js';
+import { Session, PostgrestError } from '@supabase/supabase-js';
 import { useState, useEffect } from 'react'
-import { StyleSheet, Text, FlatList, View, Image, useWindowDimensions } from 'react-native'
+import { StyleSheet, Text, FlatList, View, useWindowDimensions, Button } from 'react-native'
+import { supabase } from '../supabase';
 
 import Post from './Post'
 
-export type post = {
-    id: string,
-    title: string,
-    text: string,
-    userId: string,
-    username: string
-    userAvatar?: string,
-    files: string[]
+type postType = {
+    id: string; 
+    title: string; 
+    content: string; 
+    files: string[];
+    uid: string;
+    name: string;
+    picture?: string;
+    likes: number;
+    liked: boolean;
 };
 
-const samplePosts: post[] = [
-    {id: '1', title: 'hi', text: 'yo wassup', userId: '1', username: 'bob the idiot', files: ['https://picsum.photos/800', 'https://picsum.photos/2000']},
-    {id: '2', title: 'lo this title is like real real real long yoehmiuxcemhgiuhemsi', text: 'i am a cool post', userId: '1', username: 'bob the idiot', userAvatar: 'https://picsum.photos/1200', files: []}
+const samplePosts: postType[] = [
+    {
+        id: '1', 
+        title: 'hi', 
+        content: 'yo wassup', 
+        files: ['https://picsum.photos/800', 'https://picsum.photos/2000'], 
+        uid: '1', 
+        name: 'bob the idiot', 
+        likes: 30, 
+        liked: false
+    },
+    {
+        id: '2', 
+        title: 'lo this title is like real real real long yoehmiuxcemhgiuhemsi', 
+        content: 'i am a cool post', 
+        files: [], 
+        uid: '1', 
+        name: 'bob the idiot', 
+        picture: 'https://picsum.photos/1200', 
+        likes: 1, 
+        liked: false
+    }
 ]
+
+async function getPosts(uid: string): Promise<postType[]> {
+    const { data, error } = await supabase.rpc('get_posts', {user_uuid: uid});
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}
 
 export default function Feed({ session }: { session: Session }) {
     const dims = useWindowDimensions()
 
-    const [posts, setPosts] = useState<post[]>(samplePosts)
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(false);
+    const [posts, setPosts] = useState<postType[]>(samplePosts);
 
+    function fetchPosts() {
+        setLoading(true);
+        getPosts(session?.user.id)
+            .then((posts) => setPosts(posts))
+            .catch(() => setError(true))
+            .finally(() => setLoading(false));
+    }
+
+    useEffect(() => {
+        fetchPosts();
+    }, []);
+
+    if (loading) {
+        return <Text style = {styles.loadingText}>Loading...</Text>
+    }
+    if (error) {
+        return <>
+            <Text style = {styles.errorText}>Uh oh we couldn't find posts D:</Text>
+            <Button title = "Retry" 
+                onPress = {() => fetchPosts()} 
+                color = "red"
+            />
+        </>
+    }
     if (posts.length) {
-        return <FlatList style = {styles.main} data = {posts} renderItem = {({ item }) => {
-            return <Post item = {item}/>
+        return <FlatList style = {styles.main} data = {posts} renderItem = {({ item }: { item: postType}) => {
+            return <Post item = { item }/>
         }}/>
     } else {
         return <View style = {styles.empty}>
@@ -54,4 +111,14 @@ const styles = StyleSheet.create({
         fontSize: 60,
         textAlign: 'center'
     },
+    loadingText: {
+        color: 'white',
+        fontSize: 60,
+        textAlign: 'center'
+    },
+    errorText: {
+        color: 'red',
+        fontSize: 60,
+        textAlign: 'center'
+    }
 })
