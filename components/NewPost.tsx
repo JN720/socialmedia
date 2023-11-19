@@ -1,12 +1,16 @@
-import { SafeAreaView, StyleSheet, Text, TextInput, Button, View, Alert } from "react-native"
+import { SafeAreaView, StyleSheet, Text, TextInput, Button, View, FlatList } from "react-native"
 import { useState } from 'react';
 import { supabase } from '../supabase';
-import { Session, PostgrestError } from "@supabase/supabase-js";
+import { Session } from "@supabase/supabase-js";
 
 export default function NewPost({ session }: { session: Session }) {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [files, setFiles] = useState<string[]>([]);
+    const [links, setLinks] = useState<string[]>([]);
+
+    const [addingLink, setAddingLink] = useState(false);
+    const [link, setLink] = useState('');
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
@@ -18,7 +22,7 @@ export default function NewPost({ session }: { session: Session }) {
                 user_id: session?.user.id,
                 title, 
                 content,
-                files,
+                files: links,
                 public: true
             });
             if (error) {
@@ -31,7 +35,20 @@ export default function NewPost({ session }: { session: Session }) {
         }
     }
 
+    function addLink() {
+        const newLinks = [...links];
+        newLinks.push(link);
+        setLinks(newLinks);
+        setLink('');
+        setAddingLink(false);
+    }
+
+    async function addFile() {
+
+    }
+
     return (<SafeAreaView style = {styles.main}>
+        {error && <Text style = {styles.error}>An error occurred, please try again!</Text>}
         <Text style = {styles.title}>New Post</Text>
 
         <Text style = {styles.label}>Title</Text>
@@ -43,9 +60,45 @@ export default function NewPost({ session }: { session: Session }) {
         <View style = {styles.textView}>
             <TextInput value = {content || ''} onChangeText = {(text) => setContent(text)}
                 multiline = {true}
-                numberOfLines = {4}
+                numberOfLines = {3}
                 textAlignVertical = "top"
             />
+        </View>
+
+        {!links.length || <>
+            <Text style = {styles.label}>Links</Text>
+            <FlatList style = {styles.list} data = {links} renderItem = {({ index, item}) => {
+                return <View style = {styles.linkView}>
+                    <View style = {styles.removeButtonView}>
+                        <Button title = "-" color = "red" onPress = {() => {
+                            const newLinks = [...links];
+                            newLinks.splice(index, 1);
+                            setLinks(newLinks);
+                        }}/>
+                    </View>
+                    <Text style = {styles.linkText} numberOfLines = {1}>{item || ''}</Text>
+                </View>
+            }}/>
+        </>}
+
+        {addingLink && <View style = {styles.newLinkView}>
+            <View style = {styles.newRemoveButtonView}>
+                <Button title = "-" onPress = {() => setAddingLink(false)} color = "red"/>
+            </View>
+            <View style = {styles.newLinkTextView}>
+                <TextInput value = {link} onChangeText = {(text) => setLink(text)} textAlignVertical = "center"/>
+            </View>
+        </View>}
+
+        <View style = {styles.buttonView}>
+            <Button title = "Add Link" 
+                onPress = {() => addingLink ? addLink() : setAddingLink(true)}
+                disabled = {addingLink && !link.length}
+            />
+        </View>
+
+        <View style = {styles.buttonView}>
+            <Button title="Add File" onPress={() => addFile()}/>
         </View>
 
         <View style = {styles.buttonView}>
@@ -56,15 +109,15 @@ export default function NewPost({ session }: { session: Session }) {
             />
         </View>
 
-<View style = {styles.buttonView}>
-    <Button title="Sign Out" onPress={() => supabase.auth.signOut()}/>
-</View>
+        
     </SafeAreaView>)
 }
 
 const styles = StyleSheet.create({
     main: {
-        justifyContent: 'center',
+        flex: 1,
+        justifyContent: 'center'
+        
     },
     buttonView: {
         margin: '4%',
@@ -89,15 +142,57 @@ const styles = StyleSheet.create({
     },
     title: {
         marginHorizontal: '5%',
-        marginVertical: '7%',
+        marginTop: '2%',
         color: 'white',
         fontSize: 30,
         textAlign: 'center'
     },
-    email: {
-        marginStart: '10%',
-        marginBottom: '2%',
+    list: {
+        marginHorizontal: '10%',
+        marginTop: '2%',
+        flexShrink: 1,
+        maxHeight: '20%',
+    },
+    linkView: {
+        flexDirection: 'row',
+        marginBottom: '3%'
+    },
+    linkText: {
+        fontSize: 21,
+        alignSelf: 'center',
         color: 'white',
-        fontSize: 20
+        textAlign: 'left'
+    },
+    removeButtonView: {
+        marginStart: '1%',
+        marginEnd: '3%',
+        alignSelf: 'center',
+        width: '7%',
+    },
+    newLinkView: {
+        marginHorizontal: '10%',
+        flexDirection: 'row',
+        height: '7%'
+    },
+    newLinkTextView: {
+        padding: '1%',
+        margin: '2%',
+        marginBottom: '1%',
+        flex: 1,
+        maxHeight: '70%',
+        alignSelf: 'center',
+        backgroundColor: 'white',
+        borderRadius: 15,
+    },
+    newRemoveButtonView: {
+        marginTop: '2%',
+        marginStart: '1%',
+        marginEnd: '3%',
+        flexShrink: 1,
+        width: '7%',
+    },
+    error: {
+        color: 'red',
+        textAlign: 'center'
     }
 })
