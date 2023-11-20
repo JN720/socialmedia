@@ -14,11 +14,6 @@ type indentedComment = {
     depth: number;
 }
 
-type node = {
-    comment: indentedComment;
-    children: node[];
-}
-
 function reducer(state: replyState, action: replyState): replyState {
     return action;
 }
@@ -32,34 +27,30 @@ async function getComments(uid: string, postId: string): Promise<commentType[]> 
 }
 
 function treeify(unsorted: commentType[]): indentedComment[] {
-    const sorted: indentedComment[] = [];
-    const dict: {[key: string]: node} = {};
+    let sorted: indentedComment[] = [];
     for (const comment of unsorted) {
         if (!comment.cid) {
-            dict[comment.id] = {comment: {comment, depth: 0}, children: []};
+            sorted.push({comment, depth: 0});
         }
     }
     for (let depth = 1; depth < 4; depth++) {
         for (const comment of unsorted) {
-            if (dict[comment.cid] && !dict[comment.id]) {
-                dict[comment.cid].children.push({comment: {comment, depth}, children: []});
-                dict[comment.id] = {comment: {comment, depth}, children: []};
+            const [d, i] = findComment(comment.cid, sorted);
+            if (i != -1 && findComment(comment.id, sorted)[1] == -1) {
+                sorted.splice(i + 1, 0, {comment, depth: d + 1});
             }
         }
     }
-    Object.keys(dict).forEach((key) => {
-        if (dict[key].comment.depth === 0) {
-            dfs(sorted, dict[key]);
-        }
-    })
     return sorted;
 }
 
-function dfs(arr: indentedComment[], cur: node) {
-    arr.push(cur.comment);
-    cur.children.forEach((child) => {
-        dfs(arr, child);
-    })
+function findComment(cid: string, arr: indentedComment[]) {
+    for (let i = 0; i < arr.length; i++) {
+        if (arr[i].comment.id == cid) {
+            return [arr[i].depth, i];
+        }
+    }
+    return [0, -1];
 }
 
 export default function Comments({ uid, postId }: { uid: string, postId: string }) {
