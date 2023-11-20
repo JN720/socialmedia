@@ -13,7 +13,7 @@ function Page({ page, session }: { page: number, session: Session }) {
         case 1:
             return <Feed session = {session}/>
         case 2:
-            return <NewPost session = {session}/>
+            return <NewPost uid = {session?.user.id}/>
         default:
             return <Text>Uh oh, you're not supposed to be here!!!</Text>
     }

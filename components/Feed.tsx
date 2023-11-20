@@ -1,22 +1,12 @@
-import { Session, PostgrestError } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
 import { useState, useEffect } from 'react'
-import { StyleSheet, Text, FlatList, View, useWindowDimensions, Button } from 'react-native'
+import { StyleSheet, Text, FlatList, View, Button } from 'react-native'
 import { supabase } from '../supabase';
 
-import Post from './Post'
+import Post, { postType } from './Post'
+import Comments from './Comments';
 
-type postType = {
-    id: string; 
-    title: string; 
-    content: string; 
-    files: string[];
-    uid: string;
-    name: string;
-    picture?: string;
-    likes: number;
-    liked: boolean;
-};
-
+/*
 const samplePosts: postType[] = [
     {
         id: '1', 
@@ -40,27 +30,34 @@ const samplePosts: postType[] = [
         liked: false
     }
 ]
+*/
 
 async function getPosts(uid: string): Promise<postType[]> {
     const { data, error } = await supabase.rpc('get_posts', {user_uuid: uid});
     if (error) {
         throw error;
     }
-
     return data;
 }
 
 export default function Feed({ session }: { session: Session }) {
-    const dims = useWindowDimensions()
-
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
-    const [posts, setPosts] = useState<postType[]>(samplePosts);
+    const [posts, setPosts] = useState<postType[]>([]);
+
+    const [currentPost, setCurrentPost] = useState<string | null>(null);
+
+    function select(id: string) {
+        setCurrentPost(id);
+    }
 
     function fetchPosts() {
         setLoading(true);
         getPosts(session?.user.id)
-            .then((posts) => setPosts(posts))
+            .then((posts) => {
+                setPosts(posts);
+                setError(false);
+            })
             .catch(() => setError(true))
             .finally(() => setLoading(false));
     }
@@ -82,9 +79,12 @@ export default function Feed({ session }: { session: Session }) {
         </>
     }
     if (posts.length) {
-        return <FlatList style = {styles.main} data = {posts} renderItem = {({ item }: { item: postType}) => {
-            return <Post item = { item }/>
-        }}/>
+        return <>
+            <FlatList style = {styles.main} data = {posts} renderItem = {({ item }: { item: postType}) => {
+                return (!currentPost || item.id == currentPost) ? <Post item = {item} uid = {session?.user.id} select = {select}/> : null
+            }}/>
+            {(!currentPost) || <Comments postId = {currentPost} uid = {session?.user.id}/>}
+        </>
     } else {
         return <View style = {styles.empty}>
             <Text style = {styles.emptyText}>No posts here!</Text>
@@ -95,7 +95,7 @@ export default function Feed({ session }: { session: Session }) {
 
 const styles = StyleSheet.create({
     main: {
-        flex: 1,
+        flex: -1,
         marginTop: '2%',
         marginBottom: '4%',
         marginHorizontal: '5%'

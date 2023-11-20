@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { supabase } from '../supabase';
 import { Session } from "@supabase/supabase-js";
 
-export default function NewPost({ session }: { session: Session }) {
+export default function NewPost({ uid }: { uid: string }) {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [files, setFiles] = useState<string[]>([]);
@@ -19,7 +19,7 @@ export default function NewPost({ session }: { session: Session }) {
         setLoading(true);
         try {
             const { error } = await supabase.from('posts').insert({
-                user_id: session?.user.id,
+                user_id: uid,
                 title, 
                 content,
                 files: links,
@@ -28,6 +28,12 @@ export default function NewPost({ session }: { session: Session }) {
             if (error) {
                 throw error;
             }
+            setTitle('');
+            setContent('');
+            setFiles([]);
+            setLinks([]);
+            setAddingLink(false);
+            setLink('');
         } catch(error) {
             setError(true);
         } finally {
