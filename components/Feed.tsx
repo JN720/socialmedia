@@ -1,5 +1,5 @@
 import { useState, useEffect, useReducer, useRef } from 'react'
-import { StyleSheet, Text, View, Button, ActivityIndicator, ScrollView } from 'react-native'
+import { StyleSheet, Text, View, Button, ActivityIndicator, ScrollView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native'
 import { supabase } from '../supabase';
 
 import Post, { postType } from './Post'
@@ -26,7 +26,7 @@ function setComments(state: indentedComment[], action: indentedComment[]) {
 }
 
 export default function Feed({ user }: { user: userInfo }) {
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(0);
     const [error, setError] = useState(false);
     const [posts, setPosts] = useState<postType[]>([]);
 
@@ -41,7 +41,6 @@ export default function Feed({ user }: { user: userInfo }) {
     }
 
     function fetchPosts() {
-        setLoading(true);
         getPosts(user.id)
             .then((posts) => {
                 setPosts(posts);
@@ -51,14 +50,23 @@ export default function Feed({ user }: { user: userInfo }) {
                 setError(false);
             })
             .catch(() => setError(true))
-            .finally(() => setLoading(false));
+            .finally(() => setLoading(0));
+    }
+
+    async function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
+        if (loading == 0 && e.nativeEvent.contentOffset.y <= 5 && e.nativeEvent.velocity?.y && e.nativeEvent.velocity.y < -0.9) {
+            setLoading(2);
+            setTimeout(fetchPosts, 500);
+        }
+
     }
 
     useEffect(() => {
+        setLoading(1);
         fetchPosts();
     }, []);
 
-    if (loading) {
+    if (loading == 1) {
         return <ActivityIndicator color = "dodgerblue" size = "large"/>
     }
     if (error) {
@@ -72,7 +80,12 @@ export default function Feed({ user }: { user: userInfo }) {
     }
     if (posts.length) {
         return <>
-            <ScrollView style = {styles.main}>
+            {(loading < 2 || !!currentPost) || <ActivityIndicator style = {styles.feedSpinner} color = "dodgerblue" size = "large"/>}
+            {!currentPost || <View style = {styles.backButton}>
+                <Button title = "back" color = "red" onPress = {() => setCurrentPost(null)}/>
+                {loading < 2 || <ActivityIndicator style = {styles.commentSpinner} color = "dodgerblue" size = "large"/>}
+            </View>}
+            <ScrollView style = {styles.main} onScroll = {handleScroll}>
                 {posts.map((item: postType, index) => {
                     return (!currentPost || item.id == currentPost) ? <Post item = {item} uid = {user.id} select = {select} key = {randomUUID()} mediaInfo = {media} index = {index}/> : null
                 })}
@@ -91,7 +104,7 @@ export default function Feed({ user }: { user: userInfo }) {
 const styles = StyleSheet.create({
     main: {
         flexShrink: 1,
-        marginTop: '2%',
+        marginTop: '1%',
         marginBottom: '4%',
         marginHorizontal: '5%'
     },
@@ -115,5 +128,18 @@ const styles = StyleSheet.create({
         color: 'red',
         fontSize: 60,
         textAlign: 'center'
+    },
+    backButton: {
+        marginTop: '2%',
+        marginStart: '2%',
+        flexDirection: 'row',
+        width: '20%'
+    },
+    feedSpinner: {
+        marginTop: '2%'
+    },
+    commentSpinner: {
+        marginStart: '6%',
+        alignSelf: 'center'
     }
 })
