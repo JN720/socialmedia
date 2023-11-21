@@ -1,6 +1,7 @@
 import Feed from './Feed';
 import Account from './Account';
 import NewPost from './NewPost';
+import People from './People';
 
 import { useState, useReducer, useEffect } from 'react';
 import { StyleSheet, View, SafeAreaView, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
@@ -12,9 +13,11 @@ function Page({ page, user, session, update }: { page: number, user: userInfo, s
         case 0:
             return <Account session = { session } update = {update}/>
         case 1:
-            return <Feed user = {user}/>
+            return <Feed user = {user} uid = {null}/>
         case 2:
             return <NewPost uid = {user.id}/>
+        case 3:
+            return <People user = {user}/>
         default:
             return <Text>Uh oh, you're not supposed to be here!!!</Text>
     }
@@ -42,8 +45,8 @@ export default function Home({ session }: { session: Session }) {
         setLoading(true);
         supabase.from('users').select('id, name, picture').eq('id', session?.user.id).returns<userInfo[]>()
             .then(({ data, error }) => {
-                if (error) {
-                    setError(true);
+                if (error || data.length == 0) {
+                    setPage(0);
                 } else {
                     dispatchUser(data[0]);
                 }
@@ -66,17 +69,21 @@ export default function Home({ session }: { session: Session }) {
         </View>
         <View style = {styles.bottom}>
             <View style = {styles.nav}>
-                <TouchableOpacity style = {page == 0 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(0) }}>
+                <TouchableOpacity style = {page == 0 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(0) }} disabled = {!user.name}>
                     <Text style = {styles.image}>image</Text>
                     <Text style = {styles.label}>Account</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style = {page == 1 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(1) }}>
+                <TouchableOpacity style = {page == 1 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(1) }} disabled = {!user.name}>
                     <Text style = {styles.image}>image</Text>
                     <Text style = {styles.label}>Feed</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style = {page == 2 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(2) }}>
+                <TouchableOpacity style = {page == 2 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(2) }} disabled = {!user.name}>
                     <Text style = {styles.image}>image</Text>
                     <Text style = {styles.label}>New Post</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style = {page == 3 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(3) }} disabled = {!user.name}>
+                    <Text style = {styles.image}>image</Text>
+                    <Text style = {styles.label}>People</Text>
                 </TouchableOpacity>
             </View>
         </View>

@@ -9,8 +9,8 @@ import { userInfo } from './Home';
 import { randomUUID } from 'expo-crypto';
 import { indentedComment, replyState } from './Comments';
 
-async function getPosts(uid: string): Promise<postType[]> {
-    const { data, error } = await supabase.rpc('get_posts', {user_uuid: uid});
+async function getPosts(uid: string, id: string | null): Promise<postType[]> {
+    const { data, error } = await supabase.rpc('get_posts', {user_uuid: uid}).returns<postType[]>();
     if (error) {
         throw error;
     }
@@ -25,7 +25,7 @@ function setComments(state: indentedComment[], action: indentedComment[]) {
     return action;
 }
 
-export default function Feed({ user }: { user: userInfo }) {
+export default function Feed({ user, uid }: { user: userInfo, uid: string | null }) {
     const [loading, setLoading] = useState(0);
     const [error, setError] = useState(false);
     const [posts, setPosts] = useState<postType[]>([]);
@@ -41,7 +41,7 @@ export default function Feed({ user }: { user: userInfo }) {
     }
 
     function fetchPosts() {
-        getPosts(user.id)
+        getPosts(user.id, uid)
             .then((posts) => {
                 setPosts(posts);
                 posts.forEach((post, index) => {

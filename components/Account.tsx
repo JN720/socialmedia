@@ -28,8 +28,16 @@ export default function Account({ session, update }: { session: Session, update:
                 picture: picture
             });
             if (error) {
+                console.log(error)
                 throw error;
             }
+
+            update({
+                id: session.user.id,
+                name: name, 
+                picture: picture
+            })
+            
             setExists(true);
         } catch(error) {
             Alert.alert(error instanceof Error ? error.message : 'An error occurred');
@@ -79,7 +87,7 @@ export default function Account({ session, update }: { session: Session, update:
             if (!session.user) {
                 throw new Error('No user on the session!');
             }
-            const updates = {id: session.user.id, name: name, picture: picture, bio: bio};
+            const updates = {id: session.user.id, name, picture, bio};
             const { error } = await supabase.from('users').upsert(updates);
             if (error) {
                 throw error;

@@ -126,9 +126,6 @@ export default function Post({ item, uid, select, mediaInfo, index }: { item: po
                 />
             </View>
             <View style = {styles.interactView}>
-                <Button color = "darkblue" title = "Follow"/>
-            </View>
-            <View style = {styles.interactView}>
                 <Button color = "green" title = "Save"/>
             </View>
         </View>
