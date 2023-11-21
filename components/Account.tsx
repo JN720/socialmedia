@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
-import { StyleSheet, SafeAreaView, View, Alert, Button, TextInput, Text } from 'react-native'
-import { Session } from '@supabase/supabase-js'
+import { StyleSheet, SafeAreaView, View, Alert, Button, TextInput, Text } from 'react-native';
+import { Session } from '@supabase/supabase-js';
 
-export default function Account({ session }: { session: Session}) {
+import { userInfo } from './Home';
+
+export default function Account({ session, update }: { session: Session, update: React.Dispatch<userInfo> }) {
     const [loading, setLoading] = useState(true);
     const [name, setName] = useState('');
     const [bio, setBio] = useState('');
@@ -11,14 +13,16 @@ export default function Account({ session }: { session: Session}) {
     const [exists, setExists] = useState(true);
 
     useEffect(() => {
-        if (session) getProfile()
+        if (session) {
+            getProfile();
+        }
     }, [session])
 
     async function createProfile(name: string, picture: string, bio: string) {
         setLoading(true);
         try {
             const { error } = await supabase.from('users').insert({
-                id: session?.user.id, 
+                id: session.user.id, 
                 name: name, 
                 bio: bio, 
                 picture: picture
@@ -37,13 +41,13 @@ export default function Account({ session }: { session: Session}) {
     async function getProfile() {
         try {
             setLoading(true)
-            if (!session?.user) {
+            if (!session.user.id) {
                 throw new Error('No user on the session!');
             }
             const { data, error } = await supabase
                 .from('users')
                 .select('name, bio, picture')
-                .eq('id', session?.user.id)
+                .eq('id', session.user.id)
                 .single();
             if (error) {
                 if (error.code == 'PGRST116') {
@@ -56,6 +60,11 @@ export default function Account({ session }: { session: Session}) {
                 setName(data.name);
                 setBio(data.bio);
                 setPicture(data.picture);
+                update({
+                    id: session.user.id,
+                    name: data.name, 
+                    picture: data.picture
+                })
             }
         } catch (error) {
             Alert.alert(error instanceof Error ? error.message : 'An error occurred');
@@ -67,10 +76,10 @@ export default function Account({ session }: { session: Session}) {
     async function updateProfile(name: string, picture: string, bio: string) {
         setLoading(true);
         try {
-            if (!session?.user) {
+            if (!session.user) {
                 throw new Error('No user on the session!');
             }
-            const updates = {id: session?.user.id, name: name, picture: picture, bio: bio};
+            const updates = {id: session.user.id, name: name, picture: picture, bio: bio};
             const { error } = await supabase.from('users').upsert(updates);
             if (error) {
                 throw error;
@@ -86,7 +95,7 @@ export default function Account({ session }: { session: Session}) {
         <Text style = {styles.title}>Account</Text>
 
         <Text style = {styles.label}>Email</Text>
-        <Text style = {styles.email}>{session?.user?.email}</Text>
+        <Text style = {styles.email}>{session.user.email}</Text>
 
         <Text style = {styles.label}>Username</Text>
         <View style = {styles.textView}>

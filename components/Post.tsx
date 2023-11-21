@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 
 type postLink = {
     uri: string;
-    isImage?: boolean;
+    isImage: boolean | null;
 }
 
 export type postType = {
@@ -48,17 +48,20 @@ async function isImage(uri: string): Promise<boolean> {
     }
 }
 
-export default function Post({ item, uid, select }: { item: postType, uid: string, select: CallableFunction }) {
+export default function Post({ item, uid, select, mediaInfo, index }: { item: postType, uid: string, select: CallableFunction, mediaInfo: React.MutableRefObject<(boolean | null)[][]>, index: number }) {
     const dims = useWindowDimensions();
 
-    const [media, setMedia] = useState<postLink[]>(item.files.map((uri) => {return { uri }}));
+    const [media, setMedia] = useState<postLink[]>(item.files.map((uri, i) => {return { uri, isImage: mediaInfo.current[index][i] }}));
     const [liked, setLiked] = useState(item.liked);
 
     useEffect(() => {
         for (let i = 0; i < media.length; i++) {
             const link = media[i];
             if (!link.isImage) {
-                isImage(link.uri).then((res) => checkMedia(i, { uri: link.uri, isImage: res }))
+                isImage(link.uri).then((res) => {
+                    checkMedia(i, { uri: link.uri, isImage: res });
+                    mediaInfo.current[index][i] = res;
+                })
             }
         }
     }, []);

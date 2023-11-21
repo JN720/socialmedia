@@ -1,5 +1,5 @@
 import { StyleSheet, Alert, Image, View, Text, useWindowDimensions, Button } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '../supabase';
 
 import { replyState } from './Comments';
@@ -15,7 +15,7 @@ export type commentType = {
     liked: boolean;
 };
 
-export default function Comment({ item, uid, postId, depth, reply, select }: { item: commentType, uid: string, postId: string, depth: number, reply: string | null, select: React.Dispatch<replyState> }) {
+export default function Comment({ item, uid, postId, depth, select }: { item: commentType, uid: string, postId: string, depth: number, select: React.Dispatch<replyState> }) {
     const dims = useWindowDimensions();
     const [liked, setLiked] = useState(item.liked);
 
@@ -23,7 +23,7 @@ export default function Comment({ item, uid, postId, depth, reply, select }: { i
         item.liked = !item.liked;
         try {
             if (item.liked) {
-                const { error } = await supabase.from('comment_likes').insert({ post_id: postId, user_id: uid });
+                const { error } = await supabase.from('comment_likes').insert({ comment_id: item.id, user_id: uid });
                 if (error) {
                     throw error;
                 }
@@ -42,7 +42,6 @@ export default function Comment({ item, uid, postId, depth, reply, select }: { i
             setLiked(item.liked);
         }
     }
-
 
     return <View style = {[depths[depth].depth, styles.comment]}>
         <View style = {styles.user}>
@@ -64,7 +63,7 @@ export default function Comment({ item, uid, postId, depth, reply, select }: { i
             <View style = {styles.interactView}>
                 <Button color = "darkblue" 
                     title = "Reply" 
-                    onPress = {() => select(reply == item.id ? {id: null, name: null} : {id: item.id, name: item.name})}
+                    onPress = {() => select({id: item.id, name: item.name})}
                 />
             </View>
         </View>
@@ -75,7 +74,9 @@ const depths = [
     StyleSheet.create({depth: {marginStart: '0%'}}), 
     StyleSheet.create({depth: {marginStart: '4%'}}),
     StyleSheet.create({depth: {marginStart: '8%'}}),
-    StyleSheet.create({depth: {marginStart: '12%'}})
+    StyleSheet.create({depth: {marginStart: '12%'}}),
+    StyleSheet.create({depth: {marginStart: '16%'}}),
+    StyleSheet.create({depth: {marginStart: '20%'}}),
 ];
 
 const styles = StyleSheet.create({

@@ -1,36 +1,13 @@
-import { Session } from '@supabase/supabase-js';
-import { useState, useEffect } from 'react'
-import { StyleSheet, Text, FlatList, View, Button } from 'react-native'
+import { useState, useEffect, useReducer, useRef } from 'react'
+import { StyleSheet, Text, View, Button, ActivityIndicator, ScrollView } from 'react-native'
 import { supabase } from '../supabase';
 
 import Post, { postType } from './Post'
 import Comments from './Comments';
-
-/*
-const samplePosts: postType[] = [
-    {
-        id: '1', 
-        title: 'hi', 
-        content: 'yo wassup', 
-        files: ['https://picsum.photos/800', 'https://picsum.photos/2000'], 
-        uid: '1', 
-        name: 'bob the idiot', 
-        likes: 30, 
-        liked: false
-    },
-    {
-        id: '2', 
-        title: 'lo this title is like real real real long yoehmiuxcemhgiuhemsi', 
-        content: 'i am a cool post', 
-        files: [], 
-        uid: '1', 
-        name: 'bob the idiot', 
-        picture: 'https://picsum.photos/1200', 
-        likes: 1, 
-        liked: false
-    }
-]
-*/
+import NewComment from './NewComment';
+import { userInfo } from './Home';
+import { randomUUID } from 'expo-crypto';
+import { indentedComment, replyState } from './Comments';
 
 async function getPosts(uid: string): Promise<postType[]> {
     const { data, error } = await supabase.rpc('get_posts', {user_uuid: uid});
@@ -40,12 +17,24 @@ async function getPosts(uid: string): Promise<postType[]> {
     return data;
 }
 
-export default function Feed({ session }: { session: Session }) {
+export function setReply(state: replyState, action: replyState): replyState {
+    return action;
+}
+
+function setComments(state: indentedComment[], action: indentedComment[]) {
+    return action;
+}
+
+export default function Feed({ user }: { user: userInfo }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
     const [posts, setPosts] = useState<postType[]>([]);
 
     const [currentPost, setCurrentPost] = useState<string | null>(null);
+    const [comments, dispatchComments] = useReducer(setComments, []);
+    const [reply, dispatchReply] = useReducer(setReply, {id: null, name: null});
+
+    const media = useRef<(boolean | null)[][]>([])
 
     function select(id: string) {
         setCurrentPost(id);
@@ -53,9 +42,12 @@ export default function Feed({ session }: { session: Session }) {
 
     function fetchPosts() {
         setLoading(true);
-        getPosts(session?.user.id)
+        getPosts(user.id)
             .then((posts) => {
                 setPosts(posts);
+                posts.forEach((post, index) => {
+                    media.current.push(post.files.map(() => null))
+                })
                 setError(false);
             })
             .catch(() => setError(true))
@@ -67,7 +59,7 @@ export default function Feed({ session }: { session: Session }) {
     }, []);
 
     if (loading) {
-        return <Text style = {styles.loadingText}>Loading...</Text>
+        return <ActivityIndicator color = "dodgerblue" size = "large"/>
     }
     if (error) {
         return <>
@@ -80,10 +72,13 @@ export default function Feed({ session }: { session: Session }) {
     }
     if (posts.length) {
         return <>
-            <FlatList style = {styles.main} data = {posts} renderItem = {({ item }: { item: postType}) => {
-                return (!currentPost || item.id == currentPost) ? <Post item = {item} uid = {session?.user.id} select = {select}/> : null
-            }}/>
-            {(!currentPost) || <Comments postId = {currentPost} uid = {session?.user.id}/>}
+            <ScrollView style = {styles.main}>
+                {posts.map((item: postType, index) => {
+                    return (!currentPost || item.id == currentPost) ? <Post item = {item} uid = {user.id} select = {select} key = {randomUUID()} mediaInfo = {media} index = {index}/> : null
+                })}
+                {(!currentPost) || <Comments comments = {comments} setComments = {dispatchComments} postId = {currentPost} user = {user} setReply = {dispatchReply}/>}
+            </ScrollView>
+            {!currentPost || <NewComment comments = {comments} setComments = {dispatchComments} postId = {currentPost} user = {user} reply = {reply} setReply = {dispatchReply}/>}
         </>
     } else {
         return <View style = {styles.empty}>
@@ -95,7 +90,7 @@ export default function Feed({ session }: { session: Session }) {
 
 const styles = StyleSheet.create({
     main: {
-        flex: -1,
+        flexShrink: 1,
         marginTop: '2%',
         marginBottom: '4%',
         marginHorizontal: '5%'

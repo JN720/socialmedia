@@ -1,21 +1,19 @@
-import { StyleSheet, FlatList, Text, Button, View, TextInput, SafeAreaView, Alert } from 'react-native';
-import { useState, useEffect, useReducer } from 'react';
+import { StyleSheet, FlatList, Text, Button, View, TextInput, SafeAreaView, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { useState, useEffect, useReducer, ReducerState } from 'react';
 import { supabase } from '../supabase';
+import { randomUUID } from 'expo-crypto';
 
 import Comment, { commentType } from './Comment'
+import { userInfo } from './Home';
 
 export type replyState = {
     id: string | null;
     name: string | null;
 }
 
-type indentedComment = {
+export type indentedComment = {
     comment: commentType;
     depth: number;
-}
-
-function reducer(state: replyState, action: replyState): replyState {
-    return action;
 }
 
 async function getComments(uid: string, postId: string): Promise<commentType[]> {
@@ -44,7 +42,7 @@ function treeify(unsorted: commentType[]): indentedComment[] {
     return sorted;
 }
 
-function findComment(cid: string, arr: indentedComment[]) {
+export function findComment(cid: string, arr: indentedComment[]) {
     for (let i = 0; i < arr.length; i++) {
         if (arr[i].comment.id == cid) {
             return [arr[i].depth, i];
@@ -53,31 +51,13 @@ function findComment(cid: string, arr: indentedComment[]) {
     return [0, -1];
 }
 
-export default function Comments({ uid, postId }: { uid: string, postId: string }) {
+export default function Comments({ user, postId, comments, setComments, setReply }: { user: userInfo, postId: string, comments: indentedComment[], setComments: React.Dispatch<indentedComment[]>, setReply: React.Dispatch<replyState> }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
-    const [comments, setComments] = useState<indentedComment[]>([]);
-
-    const [newComment, setNewComment] = useState('');
-    const [reply, dispatch] = useReducer(reducer, {id: null, name: null});
-
-    async function postComment() {
-        const { error } = await supabase.from('comments').insert({
-            user_id: uid, 
-            post_id: postId, 
-            comment_id: reply.id,
-            content: newComment
-        });
-        if (error) {
-            Alert.alert('An error occurred');
-        } else {
-            setNewComment('');
-        }
-    }
 
     function fetchComments() {
         setLoading(true);
-        getComments(uid, postId)
+        getComments(user.id, postId)
             .then((unsortedComments) => {
                 setComments(treeify(unsortedComments));
                 setError(false);
@@ -91,7 +71,7 @@ export default function Comments({ uid, postId }: { uid: string, postId: string 
     }, [])
 
     if (loading) {
-        return <Text style = {styles.loadingText}>Loading...</Text>
+        return <ActivityIndicator color = "dodgerblue" size = "small"/>
     }
 
     if (error) {
@@ -104,33 +84,29 @@ export default function Comments({ uid, postId }: { uid: string, postId: string 
         </>
     }
 
-    return <SafeAreaView>
-        {comments.length ? <FlatList style = {styles.main} 
-            data = {comments} 
-            renderItem = {({ item }) => 
-            <Comment uid = {uid}
+    return <>
+        {comments.length ? <View style = {styles.main}>
+
+            {comments.map((item) => 
+            <Comment uid = {user.id}
                 postId = {postId}
                 depth = {item.depth}
-                reply = {reply.id} 
-                select = {dispatch} 
+                select = {setReply} 
                 item = {item.comment}
-            />}
-        /> :
+                key = {randomUUID()}
+            />)}
+        </View> :
         <View style = {styles.empty}>
             <Text style = {styles.emptyText}>Be the first to comment</Text>
         </View>
         }
-        <Text style = {styles.replyText}>{reply.id && `Replying to ${reply.name}`}</Text>
-        <View style = {styles.newCommentView}>
-            <View style = {styles.newCommentTextView}>
-                <TextInput value = {newComment} onChangeText = {(text) => {setNewComment(text)}}/>
-            </View>
-            <View style = {styles.newCommentButtonView}>
-                <Button title = "Submit" onPress = {postComment}/>
-            </View>
-        </View>
-    </SafeAreaView>
+        
+    </>
 }
+
+
+
+
 
 const styles = StyleSheet.create({
     main: {
@@ -157,25 +133,5 @@ const styles = StyleSheet.create({
         color: 'red',
         fontSize: 30,
         textAlign: 'center'
-    },
-    newCommentView: {
-        marginHorizontal: '2%',
-        flexDirection: 'row',
-    },
-    newCommentTextView: {
-        margin: '2%',
-        padding: '1%',
-        flex: 1,
-        backgroundColor: 'white',
-        borderRadius: 15,
-        alignSelf: 'center'
-    },
-    newCommentButtonView: {
-        alignSelf: 'center'
-    },
-    replyText: {
-        marginHorizontal: '4%',
-        //textAlign: 'center',
-        color: 'white'
     }
 })
