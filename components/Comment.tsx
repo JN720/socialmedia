@@ -15,7 +15,7 @@ export type commentType = {
     liked: boolean;
 };
 
-export default function Comment({ item, uid, postId, depth, select }: { item: commentType, uid: string, postId: string, depth: number, select: React.Dispatch<replyState> }) {
+export default function Comment({ item, uid, postId, depth, select }: { item: commentType, uid: string, postId: string, depth: number, select: React.Dispatch<replyState> | Function }) {
     const dims = useWindowDimensions();
     const [liked, setLiked] = useState(item.liked);
 

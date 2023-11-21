@@ -73,7 +73,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#404040'
     },
     user: {
-        flex: 1,
         flexDirection: 'row',
     },
     username: {
@@ -87,7 +86,6 @@ const styles = StyleSheet.create({
         borderRadius: 1000
     },
     bio: {
-        flex: 4,
         padding: '2%',
         color: 'white',
         fontSize: 20

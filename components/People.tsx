@@ -5,6 +5,7 @@ import { supabase } from "../supabase";
 import Person, { personType } from './Person';
 import { randomUUID } from "expo-crypto";
 import { userInfo } from "./Home";
+import Feed from './Feed';
 
 async function getPeople(uid: string): Promise<personType[]> {
     const { data, error } = await supabase.rpc('get_users', {user_uuid: uid}).returns<personType[]>();
@@ -24,6 +25,14 @@ export default function People({ user }: { user: userInfo }) {
 
     const [people, setPeople] = useState<personType[]>([]);
     const [currentPerson, dispatchCurrentPerson] = useReducer(setCurrentPerson, null);
+    
+    let currentPersonValue: personType | null = null;
+    for (const person of people) {
+        if (person.id == currentPerson) {
+            currentPersonValue = person;
+            break;
+        }
+    }
 
     function fetchPeople() {
         getPeople(user.id)
@@ -67,11 +76,22 @@ export default function People({ user }: { user: userInfo }) {
                 <Button title = "back" color = "red" onPress = {() => dispatchCurrentPerson(null)}/>
                 {loading < 2 || <ActivityIndicator style = {styles.commentSpinner} color = "dodgerblue" size = "large"/>}
             </View>}
-            <FlatList style = {styles.main} keyExtractor = {() => randomUUID()} data = {people} onScroll = {handleScroll} renderItem = {({ item }) => {
-                return (!currentPerson || item.id == currentPerson) ? <Person item = {item} uid = {user.id} select = {dispatchCurrentPerson}/> : null
-            }}/>
-            {//!currentPerson || <NewComment comments = {comments} setComments = {dispatchComments} postId = {currentPerson} user = {user} reply = {reply} setReply = {dispatchReply}/>}
-            }
+            {currentPerson && currentPersonValue ? <View style = {styles.alt}>
+                <Person 
+                    item = {currentPersonValue} 
+                    uid = {user.id} 
+                    select = {() => {}}
+                />
+            </View> : <FlatList style = {styles.main} 
+                keyExtractor = {() => randomUUID()} 
+                data = {people} 
+                onScroll = {handleScroll} 
+                renderItem = {({ item }) => {
+                    return  <Person item = {item} uid = {user.id} select = {dispatchCurrentPerson}/>
+                }}
+            />}
+            {!currentPerson || <Feed user = {user} uid = {currentPerson}/>}
+            
         </>
     } else {
         return <View style = {styles.empty}>
@@ -85,6 +105,12 @@ const styles = StyleSheet.create({
         flexShrink: 1,
         marginTop: '1%',
         marginBottom: '4%',
+        marginHorizontal: '5%'
+    },
+    alt: {
+        flexShrink: 1,
+        marginTop: '1%',
+        marginBottom: '14%',
         marginHorizontal: '5%'
     },
     empty: {
@@ -120,5 +146,5 @@ const styles = StyleSheet.create({
     commentSpinner: {
         marginStart: '6%',
         alignSelf: 'center'
-    }
+    },
 })

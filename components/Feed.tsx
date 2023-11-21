@@ -10,7 +10,7 @@ import { randomUUID } from 'expo-crypto';
 import { indentedComment, replyState } from './Comments';
 
 async function getPosts(uid: string, id: string | null): Promise<postType[]> {
-    const { data, error } = await supabase.rpc('get_posts', {user_uuid: uid}).returns<postType[]>();
+    const { data, error } = await supabase.rpc('get_posts', id ? {user_uuid: uid, target_uuid: id} : {user_uuid: uid}).returns<postType[]>();
     if (error) {
         throw error;
     }
