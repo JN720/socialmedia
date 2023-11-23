@@ -1,7 +1,6 @@
 import { StyleSheet, Alert, Image, View, Text, useWindowDimensions, Button } from 'react-native';
 import { useState } from 'react';
 import { supabase } from '../supabase';
-
 import { replyState } from './Comments';
 
 export type commentType = {

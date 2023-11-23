@@ -2,6 +2,7 @@ import { View, Image, Text, StyleSheet, useWindowDimensions, Button, Linking, Al
 import { randomUUID } from 'expo-crypto';
 import { supabase } from '../supabase';
 import { useState, useEffect } from 'react';
+import { getExtension } from './NewPost';
 
 type postLink = {
     uri: string;
@@ -21,11 +22,10 @@ export type postType = {
 };
 
 const imageTypes = ['image/jpg', 'image/jpeg', 'image/tiff', 'image/png', 'image/gif', 'image/bmp'];
+const extensions = ['jpg', 'jpeg', 'tiff', 'png', 'gif', 'bmp'];
 
 async function isImage(uri: string): Promise<boolean> {
-    uri = uri.split('?')[0];
-    const parts = uri.split('.');
-    if(imageTypes.indexOf(parts[parts.length - 1]) != -1) {
+    if(extensions.indexOf(getExtension(uri)) != -1) {
         return true;   
     }
     try {
@@ -46,6 +46,13 @@ async function isImage(uri: string): Promise<boolean> {
     } catch(e) {
         return false;
     }
+}
+
+function cdnify(uri: string) {
+    if (uri.startsWith('cdn:')) {
+        return 'https://kasmcuzswsaodmhhcwbe.supabase.co/storage/v1/object/public/uploads/' + uri.substring(4);
+    }
+    return uri;
 }
 
 export default function Post({ item, uid, select, mediaInfo, index }: { item: postType, uid: string, select: CallableFunction, mediaInfo: React.MutableRefObject<(boolean | null)[][]>, index: number }) {
@@ -113,7 +120,7 @@ export default function Post({ item, uid, select, mediaInfo, index }: { item: po
                 key = {randomUUID()} 
                 width = {dims.width * 0.7} 
                 height = {dims.width * 0.7} 
-                source = {{uri: uri}} 
+                source = {{uri: cdnify(uri)}} 
                 alt = {uri}
             /> :
             <Text style = {styles.link} key = {randomUUID()} onPress = {() => Linking.openURL(uri)}>{uri}</Text>
