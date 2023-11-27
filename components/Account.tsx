@@ -5,12 +5,14 @@ import { Session } from '@supabase/supabase-js';
 
 import { userInfo } from './Home';
 
-export default function Account({ session, update }: { session: Session, update: React.Dispatch<userInfo> }) {
+export default function Account({ page, session, update }: { page: number, session: Session, update: React.Dispatch<userInfo> }) {
     const [loading, setLoading] = useState(true);
     const [name, setName] = useState('');
     const [bio, setBio] = useState('');
     const [picture, setPicture] = useState('');
     const [exists, setExists] = useState(true);
+
+    
 
     useEffect(() => {
         if (session) {
@@ -99,6 +101,11 @@ export default function Account({ session, update }: { session: Session, update:
             setLoading(false);
         }
     }
+
+    if (page != 0) {
+        return;
+    }
+
     return (<SafeAreaView style = {styles.main}>
         <Text style = {styles.title}>Account</Text>
 

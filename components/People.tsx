@@ -1,4 +1,4 @@
-import { useState, useEffect, useReducer } from "react";
+import { useState, useEffect, useReducer, useRef } from "react";
 import { Text, Button, FlatList, View, ActivityIndicator, StyleSheet, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { supabase } from "../supabase";
 
@@ -19,12 +19,14 @@ function setCurrentPerson(state: string | null, action: string | null) {
     return action;
 }
 
-export default function People({ user }: { user: userInfo }) {
+export default function People({ page, user }: { page: number, user: userInfo }) {
     const [loading, setLoading] = useState(0);
     const [error, setError] = useState(false);
 
     const [people, setPeople] = useState<personType[]>([]);
     const [currentPerson, dispatchCurrentPerson] = useReducer(setCurrentPerson, null);
+
+    const loaded = useRef(false);
     
     let currentPersonValue: personType | null = null;
     for (const person of people) {
@@ -41,7 +43,10 @@ export default function People({ user }: { user: userInfo }) {
                 setError(false);
             })
             .catch(() => setError(true))
-            .finally(() => setLoading(0));
+            .finally(() => {
+                setLoading(0);
+                loaded.current = true;
+            });
     }
 
     async function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -53,9 +58,16 @@ export default function People({ user }: { user: userInfo }) {
     }
 
     useEffect(() => {
+        if (loaded || page != 3) {
+            return;
+        }
         setLoading(1);
         fetchPeople();
     }, []);
+
+    if (page != 3) {
+        return;
+    }
 
     if (loading == 1) {
         return <ActivityIndicator color = "dodgerblue" size = "large"/>
@@ -90,7 +102,7 @@ export default function People({ user }: { user: userInfo }) {
                     return  <Person item = {item} uid = {user.id} select = {dispatchCurrentPerson}/>
                 }}
             />}
-            {!currentPerson || <Feed user = {user} uid = {currentPerson}/>}
+            {!currentPerson || <Feed page = {1} user = {user} uid = {currentPerson}/>}
             
         </>
     } else {

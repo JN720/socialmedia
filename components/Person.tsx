@@ -1,4 +1,4 @@
-import { TouchableOpacity, View, Text, Image, StyleSheet, useWindowDimensions, Alert, Button } from "react-native";
+import { Pressable, View, Text, Image, StyleSheet, useWindowDimensions, Alert, Button } from "react-native";
 import { useState } from "react";
 import { supabase } from "../supabase";
 
@@ -43,7 +43,7 @@ export default function Person({ item, uid, select }: { item: personType, uid: s
         }
     }
 
-    return <TouchableOpacity style = {styles.person} onPress = {() => select(item.id)}>
+    return <Pressable style = {styles.person} onPress = {() => select(item.id)}>
         <View style = {styles.user}>
             <Image width = {dims.width * 0.08} 
                 height = {dims.width * 0.08} style = {styles.picture} 
@@ -63,7 +63,7 @@ export default function Person({ item, uid, select }: { item: personType, uid: s
             </View>
             {item.isfollower && <Text style = {styles.followText}>{item.name} follows you</Text>}
         </View>
-    </TouchableOpacity>
+    </Pressable>
 }
 
 const styles = StyleSheet.create({

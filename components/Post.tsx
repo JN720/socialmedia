@@ -1,12 +1,13 @@
-import { View, Image, Text, StyleSheet, useWindowDimensions, Button, Linking, Alert, TouchableOpacity } from 'react-native';
+import { View, Image, Text, StyleSheet, useWindowDimensions, Button, Linking, Alert, Pressable } from 'react-native';
 import { randomUUID } from 'expo-crypto';
 import { supabase } from '../supabase';
 import { useState, useEffect } from 'react';
 import { getExtension } from './NewPost';
+import { ResizeMode, Video } from 'expo-av';
 
 type postLink = {
     uri: string;
-    isImage: boolean | null;
+    contentType: number | null;
 }
 
 export type postType = {
@@ -21,30 +22,41 @@ export type postType = {
     liked: boolean;
 };
 
-const imageTypes = ['image/jpg', 'image/jpeg', 'image/tiff', 'image/png', 'image/gif', 'image/bmp'];
-const extensions = ['jpg', 'jpeg', 'tiff', 'png', 'gif', 'bmp'];
+const videoExtensions = ['mp4'];
+const imageExtensions = ['jpg', 'jpeg', 'tiff', 'png', 'gif', 'bmp'];
 
-async function isImage(uri: string): Promise<boolean> {
-    if(extensions.indexOf(getExtension(uri)) != -1) {
-        return true;   
+async function getMediaType(uri: string): Promise<number> {
+    const extension = getExtension(uri);
+    //image
+    if(imageExtensions.indexOf(extension) != -1) {
+        return 1;   
+    }
+    //video
+    if (videoExtensions.indexOf(extension) != -1) {
+        return 2;
     }
     try {
         const res = await fetch(uri, {method: 'HEAD'});
         if (res.ok) {
             const contentType = res.headers.get('Content-Type');
-            return Boolean (contentType && contentType.startsWith('image') && imageTypes.indexOf(contentType) != -1)
+            if (contentType && contentType.startsWith('image') && imageExtensions.indexOf(contentType.substring(6)) != -1) {
+                return 1;
+            }
+            if (contentType && contentType.startsWith('video') && videoExtensions.indexOf(contentType.substring(6)) != -1) {
+                return 2;
+            }
         } else if (res.status == 405) {
             const res = await fetch(uri, {method: 'GET'});
             if (res.ok) {
                 const contentType = res.headers.get('Content-Type');
-                return Boolean(contentType && contentType.startsWith('image') && imageTypes.indexOf(contentType) != -1)
+                return Number(contentType && contentType.startsWith('image') && imageExtensions.indexOf(contentType.substring(6)) != -1)
             } else {
-                return false;
+                return 0;
             }
         }
-        return false;
+        return 0;
     } catch(e) {
-        return false;
+        return 0;
     }
 }
 
@@ -55,18 +67,18 @@ function cdnify(uri: string) {
     return uri;
 }
 
-export default function Post({ item, uid, select, mediaInfo, index }: { item: postType, uid: string, select: CallableFunction, mediaInfo: React.MutableRefObject<(boolean | null)[][]>, index: number }) {
+export default function Post({ item, uid, select, mediaInfo, index }: { item: postType, uid: string, select: CallableFunction, mediaInfo: React.MutableRefObject<(number | null)[][]>, index: number }) {
     const dims = useWindowDimensions();
 
-    const [media, setMedia] = useState<postLink[]>(item.files.map((uri, i) => {return { uri, isImage: mediaInfo.current[index][i] }}));
+    const [media, setMedia] = useState<postLink[]>(item.files.map((uri, i) => {return { uri, contentType: mediaInfo.current[index][i] }}));
     const [liked, setLiked] = useState(item.liked);
 
     useEffect(() => {
         for (let i = 0; i < media.length; i++) {
             const link = media[i];
-            if (!link.isImage) {
-                isImage(link.uri).then((res) => {
-                    checkMedia(i, { uri: link.uri, isImage: res });
+            if (link.contentType == null) {
+                getMediaType(link.uri).then((res) => {
+                    checkMedia(i, { uri: link.uri, contentType: res });
                     mediaInfo.current[index][i] = res;
                 })
             }
@@ -103,7 +115,7 @@ export default function Post({ item, uid, select, mediaInfo, index }: { item: po
         }
     }
 
-    return (<TouchableOpacity style = {styles.post} onPress = {() => select(item.id)}>
+    return (<Pressable style = {styles.post} onPress = {() => select(item.id)}>
         <View style = {styles.user}>
             <Image width = {dims.width * 0.08} 
                 height = {dims.width * 0.08} style = {styles.picture} 
@@ -115,15 +127,27 @@ export default function Post({ item, uid, select, mediaInfo, index }: { item: po
         </View>
         <Text style = {styles.title}>{item.title}</Text>
         {item.content && <Text style = {styles.content}>{item.content}</Text>}
-        {media.map(({ uri, isImage }) => {
-            return isImage ? <Image style = {styles.image} 
-                key = {randomUUID()} 
-                width = {dims.width * 0.7} 
-                height = {dims.width * 0.7} 
-                source = {{uri: cdnify(uri)}} 
-                alt = {uri}
-            /> :
-            <Text style = {styles.link} key = {randomUUID()} onPress = {() => Linking.openURL(uri)}>{uri}</Text>
+        {media.map(({ uri, contentType }) => {
+            const sourceUri = cdnify(uri);
+            switch (contentType) { 
+                case 1:
+                    return <Image style = {styles.image} 
+                        key = {randomUUID()} 
+                        width = {dims.width * 0.7} 
+                        height = {dims.width * 0.7} 
+                        source = {{uri: sourceUri}} 
+                        alt = {sourceUri}
+                    /> 
+                case 2:
+                    <Video style={styles.video}
+                        source = {{uri: sourceUri}}
+                        useNativeControls
+                        resizeMode = {ResizeMode.CONTAIN}
+                        isLooping
+                    />
+                default:
+                    return <Text style = {styles.link} key = {randomUUID()} onPress = {() => Linking.openURL(sourceUri)}>{sourceUri}</Text>
+            }
         })}
         <View style = {styles.actions}>
             <View style = {styles.interactView}>
@@ -136,7 +160,7 @@ export default function Post({ item, uid, select, mediaInfo, index }: { item: po
                 <Button color = "green" title = "Save"/>
             </View>
         </View>
-    </TouchableOpacity>)
+    </Pressable>)
 }
 
 const styles = StyleSheet.create({
@@ -193,5 +217,8 @@ const styles = StyleSheet.create({
         marginVertical: '1%',
         color: 'lightblue',
         fontSize: 12
+    },
+    video: {
+        
     }
 })

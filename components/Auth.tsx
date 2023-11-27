@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Alert, StyleSheet, View, Button, TextInput, Text, TouchableHighlight } from 'react-native'
+import { Alert, StyleSheet, View, Button, TextInput, Text, Pressable } from 'react-native'
 import { supabase } from '../supabase'
 
 export default function Auth() {
@@ -38,7 +38,7 @@ export default function Auth() {
     }
 
     return (<View style = {styles.main}>
-        <Text style = {styles.text}>Welcome to Sosharu Media!</Text>
+        <Text style = {styles.text}>Welcome to Social Media!</Text>
         <View style = {styles.textView}>
             <TextInput
                 onChangeText = {(text: string) => setEmail(text)}
@@ -57,23 +57,23 @@ export default function Auth() {
             />
         </View>
         <View style = {styles.buttonView}>
-            <TouchableHighlight style = {styles.button}>
+            <Pressable style = {styles.button}>
                 <Button title = "Sign in" 
                     disabled = {loading} 
                     onPress={() => signInWithEmail()}
                     color = "dodgerblue"
                 />
-            </TouchableHighlight>
+            </Pressable>
         </View>
         <View style = {styles.buttonView}>
-            <TouchableHighlight style = {styles.button}>
+            <Pressable style = {styles.button}>
                 <Button 
                     title = "Sign up" 
                     disabled = {loading} 
                     onPress={() => signUpWithEmail()}
                     color = "blue"
                 />
-            </TouchableHighlight>
+            </Pressable>
         </View>
     </View>)
 }

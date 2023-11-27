@@ -25,7 +25,7 @@ function setComments(state: indentedComment[], action: indentedComment[]) {
     return action;
 }
 
-export default function Feed({ user, uid }: { user: userInfo, uid: string | null }) {
+export default function Feed({ page, user, uid }: { page: number, user: userInfo, uid: string | null }) {
     const [loading, setLoading] = useState(0);
     const [error, setError] = useState(false);
     const [posts, setPosts] = useState<postType[]>([]);
@@ -34,7 +34,8 @@ export default function Feed({ user, uid }: { user: userInfo, uid: string | null
     const [comments, dispatchComments] = useReducer(setComments, []);
     const [reply, dispatchReply] = useReducer(setReply, {id: null, name: null});
 
-    const media = useRef<(boolean | null)[][]>([])
+    const media = useRef<(number | null)[][]>([])
+    const loaded = useRef(false);
 
     function select(id: string) {
         setCurrentPost(id);
@@ -50,7 +51,10 @@ export default function Feed({ user, uid }: { user: userInfo, uid: string | null
                 setError(false);
             })
             .catch(() => setError(true))
-            .finally(() => setLoading(0));
+            .finally(() => {
+                setLoading(0);
+                loaded.current = true;
+            });
     }
 
     async function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -62,13 +66,21 @@ export default function Feed({ user, uid }: { user: userInfo, uid: string | null
     }
 
     useEffect(() => {
+        if (loaded) {
+            return;
+        }
         setLoading(1);
         fetchPosts();
     }, []);
 
+    if (page != 1) {
+        return;
+    }
+
     if (loading == 1) {
         return <ActivityIndicator color = "dodgerblue" size = "large"/>
     }
+
     if (error) {
         return <>
             <Text style = {styles.errorText}>Uh oh we couldn't find posts D:</Text>
@@ -96,6 +108,14 @@ export default function Feed({ user, uid }: { user: userInfo, uid: string | null
     } else {
         return <View style = {styles.empty}>
             <Text style = {styles.emptyText}>No posts here!</Text>
+            <View style = {styles.emptyButtonView}>
+                <Button title = "Refresh" 
+                    onPress = {() => {
+                        setLoading(1); 
+                        fetchPosts();
+                    }}
+                />
+            </View>
         </View>
     }
 
@@ -141,5 +161,8 @@ const styles = StyleSheet.create({
     commentSpinner: {
         marginStart: '6%',
         alignSelf: 'center'
+    },
+    emptyButtonView: {
+
     }
 })

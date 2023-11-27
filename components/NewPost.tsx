@@ -7,6 +7,8 @@ import { randomUUID } from "expo-crypto";
 export type media = {
     uri: string;
     local: boolean;
+    contentType?: string;
+    index?: number;
 }
 
 export function getExtension(uri: string) {
@@ -15,7 +17,7 @@ export function getExtension(uri: string) {
     return parts[parts.length - 1];
 }
 
-export default function NewPost({ uid }: { uid: string }) {
+export default function NewPost({ page, uid }: { page: number, uid: string }) {
     const { width } = useWindowDimensions();
 
     const [title, setTitle] = useState('');
@@ -26,6 +28,7 @@ export default function NewPost({ uid }: { uid: string }) {
     const [link, setLink] = useState('');
     const [addingFile, setAddingFile] = useState(false);
     const [uploading, setUploading] = useState(0);
+    const [amountToUpload, setAmountToUpload] = useState(0);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
@@ -34,46 +37,52 @@ export default function NewPost({ uid }: { uid: string }) {
         setLoading(true);
         let uploads = links;
         const filesToUpload: media[] = [];
-        uploads.forEach((file) => {
-            if (file.local) {
-                filesToUpload.push(file);
+        uploads.forEach((file, index) => {
+            if (file.local == true) {
+                filesToUpload.push({uri: file.uri, contentType: file.contentType, local: true, index: index});
             }
         });
         if (filesToUpload.length) {
             try {
-                setUploading(filesToUpload.length);
+                setUploading(0);
+                setAmountToUpload(filesToUpload.length);
+                let uploaded = 0;
                 for (let i = 0; i < filesToUpload.length; i++) {
-                    const blob = await fetch(filesToUpload[i].uri)
-                        .then((res) => res.blob())
+                    console.log(filesToUpload[i]);
+                    const { uri, contentType, index} = filesToUpload[i];
+                    if (!contentType || index == null || undefined) {
+                        throw new Error('Insufficient Data');
+                    }
+                    const file = await fetch(uri).then(res => res.arrayBuffer())
                     const extension = getExtension(filesToUpload[i].uri);
-                    const filename = randomUUID() + '.' + extension
-                    const { data, error } = await supabase.storage.
-                        from('uploads').
-                        upload(uid + '/' + filename, blob/*, {
-                            contentType: blob.type
-                        }*/);
+                    const filename = randomUUID() + '.' + extension;
+                    const { error } = await supabase.storage.
+                        from('uploads')
+                        .upload(uid + '/' + filename, file, { contentType: contentType + '/' + extension});       
                     if (error) {
                         throw error;
                     }
-                    console.log(data);
-                    uploads[i].uri = 'cdn:' + uid + '/' + filename; 
-                    setUploading(uploading - 1);
+                    uploads[index].uri = 'cdn:' + uid + '/' + filename;
+                    uploaded++;
+                    setUploading(uploaded);
                 }
             } catch(e) {
                 console.log(e);
                 setUploading(0);
-                setError(true);
                 setLoading(false);
+                setError(true);
                 return;
             }
-        
+            setUploading(0);
+            setLoading(false);
         }
+        console.log(uploads)
         try {
             const { error } = await supabase.from('posts').insert({
                 user_id: uid,
                 title, 
                 content,
-                files: uploads,
+                files: uploads.map(({ uri }) => uri),
                 public: true
             });
             if (error) {
@@ -110,10 +119,15 @@ export default function NewPost({ uid }: { uid: string }) {
         });
         if (!images.canceled) {
             const newLinks = links;
-            newLinks.push(...images.assets.map((file) => {return {uri: file.uri, local: true}}));
+            newLinks.push(...images.assets.map((file) => {
+                return {uri: file.uri, local: true, contentType: file.type}}));
             setLinks(newLinks);
         }
         setAddingFile(false);
+    }
+
+    if (page != 2) {
+        return;
     }
 
     return (<SafeAreaView style = {styles.main}>
@@ -194,7 +208,7 @@ export default function NewPost({ uid }: { uid: string }) {
             />
         </View>
 
-        {uploading == 0 || <Text style = {styles.uploadText}>Uploading... ({links.length - uploading}/{links.length})</Text>}
+        {uploading == 0 || <Text style = {styles.uploadText}>Uploading... ({uploading}/{amountToUpload})</Text>}
     </SafeAreaView>)
 }
 

@@ -4,24 +4,17 @@ import NewPost from './NewPost';
 import People from './People';
 
 import { useState, useReducer, useEffect } from 'react';
-import { StyleSheet, View, SafeAreaView, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, SafeAreaView, Text, Pressable, ActivityIndicator } from 'react-native';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 
 function Page({ page, user, session, update }: { page: number, user: userInfo, session: Session, update: React.Dispatch<userInfo> }) {
-    switch (page) {
-        case 0:
-            return <Account session = { session } update = {update}/>
-        case 1:
-            return <Feed user = {user} uid = {null}/>
-        case 2:
-            return <NewPost uid = {user.id}/>
-        case 3:
-            return <People user = {user}/>
-        default:
-            return <Text>Uh oh, you're not supposed to be here!!!</Text>
-    }
-    
+    return <>
+        <Account page = {page} session = { session } update = {update}/>
+        <Feed page = {page} user = {user} uid = {null}/>
+        <NewPost page = {page} uid = {user.id}/>
+        <People page = {page} user = {user}/>
+    </>
 }
 
 export type userInfo = {
@@ -62,29 +55,32 @@ export default function Home({ session }: { session: Session }) {
     if (error) {
         return <Text>An error occurred</Text>
     }
-
+    //<Page user = {user} page = {page} session = {session} update = {dispatchUser}/>
     return (<SafeAreaView style = {styles.main}>
         <View style = {styles.content}>
-            <Page user = {user} page = {page} session = {session} update = {dispatchUser}/>
+            <Account page = {page} session = { session } update = {dispatchUser}/>
+            <Feed page = {page} user = {user} uid = {null}/>
+            <NewPost page = {page} uid = {user.id}/>
+            <People page = {page} user = {user}/>
         </View>
         <View style = {styles.bottom}>
             <View style = {styles.nav}>
-                <TouchableOpacity style = {page == 0 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(0) }} disabled = {!user.name}>
+                <Pressable style = {page == 0 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(0) }} disabled = {!user.name}>
                     <Text style = {styles.image}>image</Text>
                     <Text style = {styles.label}>Account</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style = {page == 1 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(1) }} disabled = {!user.name}>
+                </Pressable>
+                <Pressable style = {page == 1 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(1) }} disabled = {!user.name}>
                     <Text style = {styles.image}>image</Text>
                     <Text style = {styles.label}>Feed</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style = {page == 2 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(2) }} disabled = {!user.name}>
+                </Pressable>
+                <Pressable style = {page == 2 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(2) }} disabled = {!user.name}>
                     <Text style = {styles.image}>image</Text>
                     <Text style = {styles.label}>New Post</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style = {page == 3 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(3) }} disabled = {!user.name}>
+                </Pressable>
+                <Pressable style = {page == 3 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(3) }} disabled = {!user.name}>
                     <Text style = {styles.image}>image</Text>
                     <Text style = {styles.label}>People</Text>
-                </TouchableOpacity>
+                </Pressable>
             </View>
         </View>
     </SafeAreaView>)
