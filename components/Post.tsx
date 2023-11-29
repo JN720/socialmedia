@@ -1,9 +1,10 @@
 import { View, Image, Text, StyleSheet, useWindowDimensions, Button, Linking, Alert, Pressable } from 'react-native';
 import { randomUUID } from 'expo-crypto';
 import { supabase } from '../supabase';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getExtension } from './NewPost';
 import { ResizeMode, Video } from 'expo-av';
+import { userInfo } from './Home';
 
 type postLink = {
     uri: string;
@@ -60,14 +61,14 @@ async function getMediaType(uri: string): Promise<number> {
     }
 }
 
-function cdnify(uri: string) {
+export function cdnify(uri: string) {
     if (uri.startsWith('cdn:')) {
         return 'https://kasmcuzswsaodmhhcwbe.supabase.co/storage/v1/object/public/uploads/' + uri.substring(4);
     }
     return uri;
 }
 
-export default function Post({ item, uid, select, mediaInfo, index }: { item: postType, uid: string, select: CallableFunction, mediaInfo: React.MutableRefObject<(number | null)[][]>, index: number }) {
+export default function Post({ setPage, item, uid, select, mediaInfo, index }: { setPage: React.Dispatch<{page: number, user: string | null}>, item: postType, uid: string, select: CallableFunction, mediaInfo: React.MutableRefObject<(number | null)[][]>, index: number }) {
     const dims = useWindowDimensions();
 
     const [media, setMedia] = useState<postLink[]>(item.files.map((uri, i) => {return { uri, contentType: mediaInfo.current[index][i] }}));
@@ -115,8 +116,8 @@ export default function Post({ item, uid, select, mediaInfo, index }: { item: po
         }
     }
 
-    return (<Pressable style = {styles.post} onPress = {() => select(item.id)}>
-        <View style = {styles.user}>
+    return (<View style = {styles.post}>
+        <Pressable style = {styles.user} onPress= {() => setPage({page: 3, user: item.uid})}>
             <Image width = {dims.width * 0.08} 
                 height = {dims.width * 0.08} style = {styles.picture} 
                 source = {item.picture ? {uri: item.picture} : require('./user.png')} 
@@ -124,43 +125,45 @@ export default function Post({ item, uid, select, mediaInfo, index }: { item: po
             <View style = {styles.usernameView}>
                 <Text style = {styles.username}>{item.name}</Text>
             </View>    
-        </View>
-        <Text style = {styles.title}>{item.title}</Text>
-        {item.content && <Text style = {styles.content}>{item.content}</Text>}
-        {media.map(({ uri, contentType }) => {
-            const sourceUri = cdnify(uri);
-            switch (contentType) { 
-                case 1:
-                    return <Image style = {styles.image} 
-                        key = {randomUUID()} 
-                        width = {dims.width * 0.7} 
-                        height = {dims.width * 0.7} 
-                        source = {{uri: sourceUri}} 
-                        alt = {sourceUri}
-                    /> 
-                case 2:
-                    <Video style={styles.video}
-                        source = {{uri: sourceUri}}
-                        useNativeControls
-                        resizeMode = {ResizeMode.CONTAIN}
-                        isLooping
+        </Pressable>
+        <Pressable onPress = {() => select(item.id)}>
+            <Text style = {styles.title}>{item.title}</Text>
+            {item.content && <Text style = {styles.content}>{item.content}</Text>}
+            {media.map(({ uri, contentType }) => {
+                const sourceUri = cdnify(uri);
+                switch (contentType) { 
+                    case 1:
+                        return <Image style = {styles.image} 
+                            key = {randomUUID()} 
+                            width = {dims.width * 0.7} 
+                            height = {dims.width * 0.7} 
+                            source = {{uri: sourceUri}} 
+                            alt = {sourceUri}
+                        /> 
+                    case 2:
+                        <Video style={styles.video}
+                            source = {{uri: sourceUri}}
+                            useNativeControls
+                            resizeMode = {ResizeMode.CONTAIN}
+                            isLooping
+                        />
+                    default:
+                        return <Text style = {styles.link} key = {randomUUID()} onPress = {() => Linking.openURL(sourceUri)}>{sourceUri}</Text>
+                }
+            })}
+            <View style = {styles.actions}>
+                <View style = {styles.interactView}>
+                    <Button color = {liked ? 'pink' : 'grey'} 
+                        title = {item.likes.toString()}
+                        onPress = {changeLiked}
                     />
-                default:
-                    return <Text style = {styles.link} key = {randomUUID()} onPress = {() => Linking.openURL(sourceUri)}>{sourceUri}</Text>
-            }
-        })}
-        <View style = {styles.actions}>
-            <View style = {styles.interactView}>
-                <Button color = {liked ? 'pink' : 'grey'} 
-                    title = {item.likes.toString()}
-                    onPress = {changeLiked}
-                />
-            </View>
-            <View style = {styles.interactView}>
-                <Button color = "green" title = "Save"/>
-            </View>
-        </View>
-    </Pressable>)
+                </View>
+                <View style = {styles.interactView}>
+                    <Button color = "green" title = "Save"/>
+                </View>
+            </View>    
+        </Pressable>
+    </View>)
 }
 
 const styles = StyleSheet.create({

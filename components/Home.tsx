@@ -8,14 +8,14 @@ import { StyleSheet, View, SafeAreaView, Text, Pressable, ActivityIndicator } fr
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 
-function Page({ page, user, session, update }: { page: number, user: userInfo, session: Session, update: React.Dispatch<userInfo> }) {
+/*function Page({ page, user, session, update }: { page: number, user: userInfo, session: Session, update: React.Dispatch<userInfo> }) {
     return <>
         <Account page = {page} session = { session } update = {update}/>
         <Feed page = {page} user = {user} uid = {null}/>
         <NewPost page = {page} uid = {user.id}/>
         <People page = {page} user = {user}/>
     </>
-}
+}*/
 
 export type userInfo = {
     id: string;
@@ -27,8 +27,12 @@ function setUser(state: userInfo, action: userInfo) {
     return action;
 }
 
+function setPage(state: {page: number, user: string | null}, action: {page: number, user: string | null}) {
+    return action;
+}
+
 export default function Home({ session }: { session: Session }) {
-    const [page, setPage] = useState(1);
+    const [page, dispatchPage] = useReducer(setPage, {page: 1, user: null});
     const [user, dispatchUser] = useReducer(setUser, {id: session?.user.id, name: '', picture: ''});
 
     const [loading, setLoading] = useState(true);
@@ -39,7 +43,7 @@ export default function Home({ session }: { session: Session }) {
         supabase.from('users').select('id, name, picture').eq('id', session?.user.id).returns<userInfo[]>()
             .then(({ data, error }) => {
                 if (error || data.length == 0) {
-                    setPage(0);
+                    dispatchPage({page: 0, user: null});
                 } else {
                     dispatchUser(data[0]);
                 }
@@ -58,26 +62,26 @@ export default function Home({ session }: { session: Session }) {
     //<Page user = {user} page = {page} session = {session} update = {dispatchUser}/>
     return (<SafeAreaView style = {styles.main}>
         <View style = {styles.content}>
-            <Account page = {page} session = { session } update = {dispatchUser}/>
-            <Feed page = {page} user = {user} uid = {null}/>
-            <NewPost page = {page} uid = {user.id}/>
-            <People page = {page} user = {user}/>
+            <Account page = {page.page} session = { session } update = {dispatchUser}/>
+            <Feed page = {page.page} setPage = {dispatchPage} user = {user} uid = {null}/>
+            <NewPost page = {page.page} uid = {user.id}/>
+            <People pageInfo = {page} setPage = {dispatchPage} user = {user}/>
         </View>
         <View style = {styles.bottom}>
             <View style = {styles.nav}>
-                <Pressable style = {page == 0 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(0) }} disabled = {!user.name}>
+                <Pressable style = {page.page == 0 ? styles.navSelected : styles.navUnselected} onPress = {() => { dispatchPage({page: 0, user: null}) }} disabled = {!user.name}>
                     <Text style = {styles.image}>image</Text>
                     <Text style = {styles.label}>Account</Text>
                 </Pressable>
-                <Pressable style = {page == 1 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(1) }} disabled = {!user.name}>
+                <Pressable style = {page.page == 1 ? styles.navSelected : styles.navUnselected} onPress = {() => { dispatchPage({page: 1, user: null}) }} disabled = {!user.name}>
                     <Text style = {styles.image}>image</Text>
                     <Text style = {styles.label}>Feed</Text>
                 </Pressable>
-                <Pressable style = {page == 2 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(2) }} disabled = {!user.name}>
+                <Pressable style = {page.page == 2 ? styles.navSelected : styles.navUnselected} onPress = {() => { dispatchPage({page: 2, user: null}) }} disabled = {!user.name}>
                     <Text style = {styles.image}>image</Text>
                     <Text style = {styles.label}>New Post</Text>
                 </Pressable>
-                <Pressable style = {page == 3 ? styles.navSelected : styles.navUnselected} onPress = {() => { setPage(3) }} disabled = {!user.name}>
+                <Pressable style = {page.page == 3 ? styles.navSelected : styles.navUnselected} onPress = {() => { dispatchPage({page: 3, user: null}) }} disabled = {!user.name}>
                     <Text style = {styles.image}>image</Text>
                     <Text style = {styles.label}>People</Text>
                 </Pressable>

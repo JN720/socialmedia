@@ -1,9 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
-import { StyleSheet, SafeAreaView, View, Alert, Button, TextInput, Text } from 'react-native';
+import { StyleSheet, Pressable, Image, SafeAreaView, View, Alert, Button, TextInput, Text } from 'react-native';
 import { Session } from '@supabase/supabase-js';
-
+import { launchImageLibraryAsync, MediaTypeOptions } from 'expo-image-picker';
 import { userInfo } from './Home';
+import { randomUUID } from 'expo-crypto';
+import { getExtension } from './NewPost';
+import { cdnify } from './Post';
+
 
 export default function Account({ page, session, update }: { page: number, session: Session, update: React.Dispatch<userInfo> }) {
     const [loading, setLoading] = useState(true);
@@ -11,8 +15,10 @@ export default function Account({ page, session, update }: { page: number, sessi
     const [bio, setBio] = useState('');
     const [picture, setPicture] = useState('');
     const [exists, setExists] = useState(true);
+    const [changingPicture, setChangingPicture] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
-    
+    const changedPicture = useRef(false);
 
     useEffect(() => {
         if (session) {
@@ -83,18 +89,52 @@ export default function Account({ page, session, update }: { page: number, sessi
         }
     }
 
+    async function getPicture() {
+        setChangingPicture(true);
+        const image = await launchImageLibraryAsync({
+            mediaTypes: MediaTypeOptions.Images,
+            quality: 1,
+            allowsEditing: true
+        });
+        if (!image.canceled) {
+            setPicture(image.assets[0].uri);
+            changedPicture.current = true;
+        }
+        setChangingPicture(false);
+    }
+
+    async function uploadPicture() {
+        const file = await fetch(picture).then(res => res.arrayBuffer())
+        const extension = getExtension(picture);
+        const uuid = randomUUID()
+        const { error } = await supabase.storage.
+            from('pictures')
+            .upload(session.user.id + '/' + uuid + '.' + extension, file, { contentType: 'image/' + extension});       
+        if (error) {
+            throw error;
+        }
+        return uuid 
+    }
+
     async function updateProfile(name: string, picture: string, bio: string) {
         setLoading(true);
         try {
             if (!session.user) {
                 throw new Error('No user on the session!');
             }
-            const updates = {id: session.user.id, name, picture, bio};
+
+            let uuid = '';
+
+            if (exists && changedPicture.current) {
+                uuid = 'cdn:' + await uploadPicture();       
+            }
+
+            const updates = {id: session.user.id, name, picture: uuid || picture, bio};
             const { error } = await supabase.from('users').upsert(updates);
             if (error) {
                 throw error;
             }
-        
+            changedPicture.current = false;
         } catch (error) {
             Alert.alert(error instanceof Error ? error.message : 'An error occurred');
         } finally {
@@ -112,6 +152,17 @@ export default function Account({ page, session, update }: { page: number, sessi
         <Text style = {styles.label}>Email</Text>
         <Text style = {styles.email}>{session.user.email}</Text>
 
+        <Text style = {styles.label}>Picture</Text>
+        {exists && <Pressable style = {styles.picturePressable} onPress = {() => {
+            if (!changingPicture) {
+                getPicture();
+            }
+        }}>
+            <Image 
+                style = {styles.picture} 
+                source = {picture ? {uri: cdnify(picture)} : require('./user.png')} 
+            />
+        </Pressable>}
         <Text style = {styles.label}>Username</Text>
         <View style = {styles.textView}>
             <TextInput value = {name || ''} onChangeText = {(text) => setName(text)}/>
@@ -128,7 +179,7 @@ export default function Account({ page, session, update }: { page: number, sessi
 
         <View style = {styles.buttonView}>
             <Button
-                title = {loading ? 'Loading ...' : (exists ? 'Update' : 'Create')}
+                title = {uploading ? 'Uploading...' : (loading ? 'Loading ...' : (exists ? 'Update' : 'Create'))}
                 onPress = {() => {
                     if (exists) {
                         updateProfile(name, picture, bio);
@@ -137,7 +188,7 @@ export default function Account({ page, session, update }: { page: number, sessi
                     }
                     
                 }}
-                disabled = {loading || !name}
+                disabled = {loading || !name || uploading}
             />
         </View>
 
@@ -184,5 +235,15 @@ const styles = StyleSheet.create({
         marginBottom: '2%',
         color: 'white',
         fontSize: 20
+    },
+    picture: {
+        alignSelf: 'center',
+        marginVertical: '2%',
+        height: '100%',
+        resizeMode: 'contain'
+    },
+    picturePressable: {
+        marginVertical: '2%',
+        height: '15%'
     }
 })

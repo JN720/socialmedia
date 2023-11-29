@@ -19,15 +19,16 @@ function setCurrentPerson(state: string | null, action: string | null) {
     return action;
 }
 
-export default function People({ page, user }: { page: number, user: userInfo }) {
+export default function People({ pageInfo, setPage, user }: { pageInfo: {page: number, user: string | null}, setPage: React.Dispatch<{page: number, user: string | null}>, user: userInfo }) {
     const [loading, setLoading] = useState(0);
     const [error, setError] = useState(false);
 
     const [people, setPeople] = useState<personType[]>([]);
-    const [currentPerson, dispatchCurrentPerson] = useReducer(setCurrentPerson, null);
+    const [currentPerson, dispatchCurrentPerson] = useReducer(setCurrentPerson, pageInfo.user);
 
     const loaded = useRef(false);
-    
+    const returnToFeed = useRef(false);
+
     let currentPersonValue: personType | null = null;
     for (const person of people) {
         if (person.id == currentPerson) {
@@ -58,14 +59,21 @@ export default function People({ page, user }: { page: number, user: userInfo })
     }
 
     useEffect(() => {
-        if (loaded || page != 3) {
+        if (people.length && (loaded || pageInfo.page != 3)) {
             return;
         }
         setLoading(1);
         fetchPeople();
     }, []);
 
-    if (page != 3) {
+    useEffect(() => {
+        if (pageInfo.user) {
+            dispatchCurrentPerson(pageInfo.user);
+            returnToFeed.current = true;
+        }
+    }, [pageInfo])
+
+    if (pageInfo.page != 3) {
         return;
     }
 
@@ -85,7 +93,13 @@ export default function People({ page, user }: { page: number, user: userInfo })
         return <>
             {(loading < 2 || !!currentPerson) || <ActivityIndicator style = {styles.feedSpinner} color = "dodgerblue" size = "large"/>}
             {!currentPerson || <View style = {styles.backButton}>
-                <Button title = "back" color = "red" onPress = {() => dispatchCurrentPerson(null)}/>
+                <Button title = "back" color = "red" onPress = {() => {
+                    if (returnToFeed.current) {
+                        setPage({page: 1, user: null});
+                    } else {
+                        dispatchCurrentPerson(null);
+                    }
+                }}/>
                 {loading < 2 || <ActivityIndicator style = {styles.commentSpinner} color = "dodgerblue" size = "large"/>}
             </View>}
             {currentPerson && currentPersonValue ? <View style = {styles.alt}>
@@ -102,7 +116,7 @@ export default function People({ page, user }: { page: number, user: userInfo })
                     return  <Person item = {item} uid = {user.id} select = {dispatchCurrentPerson}/>
                 }}
             />}
-            {!currentPerson || <Feed page = {1} user = {user} uid = {currentPerson}/>}
+            {!currentPerson || <Feed page = {1} setPage = {setPage} user = {user} uid = {currentPerson}/>}
             
         </>
     } else {

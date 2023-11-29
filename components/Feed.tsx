@@ -25,7 +25,7 @@ function setComments(state: indentedComment[], action: indentedComment[]) {
     return action;
 }
 
-export default function Feed({ page, user, uid }: { page: number, user: userInfo, uid: string | null }) {
+export default function Feed({ page, setPage, user, uid }: { page: number, setPage: React.Dispatch<{page: number, user: string | null}>, user: userInfo, uid: string | null }) {
     const [loading, setLoading] = useState(0);
     const [error, setError] = useState(false);
     const [posts, setPosts] = useState<postType[]>([]);
@@ -66,7 +66,7 @@ export default function Feed({ page, user, uid }: { page: number, user: userInfo
     }
 
     useEffect(() => {
-        if (loaded) {
+        if (loaded && posts.length) {
             return;
         }
         setLoading(1);
@@ -99,7 +99,7 @@ export default function Feed({ page, user, uid }: { page: number, user: userInfo
             </View>}
             <ScrollView style = {styles.main} onScroll = {handleScroll}>
                 {posts.map((item: postType, index) => {
-                    return (!currentPost || item.id == currentPost) ? <Post item = {item} uid = {user.id} select = {select} key = {randomUUID()} mediaInfo = {media} index = {index}/> : null
+                    return (!currentPost || item.id == currentPost) ? <Post setPage = {setPage} item = {item} uid = {user.id} select = {select} key = {randomUUID()} mediaInfo = {media} index = {index}/> : null
                 })}
                 {(!currentPost) || <Comments comments = {comments} setComments = {dispatchComments} postId = {currentPost} user = {user} setReply = {dispatchReply}/>}
             </ScrollView>
