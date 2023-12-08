@@ -104,12 +104,14 @@ export default function Account({ page, session, update }: { page: number, sessi
     }
 
     async function uploadPicture() {
+        setUploading(true);
         const file = await fetch(picture).then(res => res.arrayBuffer())
         const extension = getExtension(picture);
         const uuid = randomUUID()
         const { error } = await supabase.storage.
             from('pictures')
             .upload(session.user.id + '/' + uuid + '.' + extension, file, { contentType: 'image/' + extension});       
+        setUploading(false);
         if (error) {
             throw error;
         }
